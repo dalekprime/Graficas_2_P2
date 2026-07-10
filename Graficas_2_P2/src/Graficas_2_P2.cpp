@@ -24,9 +24,6 @@ void MainEngine::SetupWindow() {
 	//Hacer el contexto de la ventana actual
 	glfwMakeContextCurrent(window);
 	glfwSetWindowUserPointer(window, this);
-	//Definir Callback de eventos
-	glfwSetMouseButtonCallback(window, mouse_button_callback);
-	glfwSetCursorPosCallback(window, cursor_position_callback);
 	//Cargar las funciones de OpenGL usando GLAD
 	if (!gladLoadGL(glfwGetProcAddress)) {
 		std::cerr << "Failed to create GLFW window" << std::endl;
@@ -48,6 +45,9 @@ void MainEngine::SetupWindow() {
 	ImGui_ImplOpenGL3_Init("#version 460 core");
 	//Crear los programas de shaders
 	rayMarchingShader = std::make_unique<ShaderProgram>("assets/shaders/rayMarchingShader.vert", "assets/shaders/rayMarchingShader.frag");
+	actualShader = rayMarchingShader.get();
+	//Crear la cámara
+	camera = std::make_unique<Camera>(width, height, glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 void MainEngine::MainLoop() {
@@ -91,12 +91,17 @@ void MainEngine::MainLoop() {
 }
 
 void MainEngine::Update() {
+	float currentFrame = glfwGetTime();
+	deltaTime = currentFrame - lastFrame;
+	lastFrame = currentFrame;
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	rayMarchingShader->Activate();
-	rayMarchingShader->SetFloat2("uRotation", yaw, pitch);
-	rayMarchingShader->SetInt("uSteps", steps);
-	rayMarchingShader->SetFloat("uStepSize", stepSize);
+	camera->Inputs(window, deltaTime);
+	camera->updateMatrix(45.0f, 0.1f, 100.0f);
+	camera->matrix(*actualShader);
+	actualShader->Activate();
+	actualShader->SetInt("uSteps", steps);
+	actualShader->SetFloat("uStepSize", stepSize);
 	vao->Bind();
 	glBindTexture(GL_TEXTURE_3D, noiseText);
 	glDrawArrays(GL_TRIANGLES, 0, vertex.size());
@@ -118,26 +123,6 @@ void MainEngine::Cleanup() {
 	ImGui::DestroyContext();
 	glfwDestroyWindow(window);
 	glfwTerminate();
-}
-
-void MainEngine::mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
-	if (ImGui::GetIO().WantCaptureMouse) return;
-	MainEngine* engine = static_cast<MainEngine*>(glfwGetWindowUserPointer(window));
-	if (button == GLFW_MOUSE_BUTTON_LEFT) {
-		if (action == GLFW_PRESS) engine->isDragging = true;
-		else if (action == GLFW_RELEASE) engine->isDragging = false;
-	}
-}
-
-void MainEngine::cursor_position_callback(GLFWwindow* window, double xpos, double ypos) {
-	if (ImGui::GetIO().WantCaptureMouse) return;
-	MainEngine* engine = static_cast<MainEngine*>(glfwGetWindowUserPointer(window));
-	if (engine->isDragging) {
-		engine->yaw += (xpos - engine->lastX) * 0.01f;
-		engine->pitch += (engine->lastY - ypos) * 0.01f;
-	}
-	engine->lastX = xpos;
-	engine->lastY = ypos;
 }
 
 int main() {

@@ -7,6 +7,7 @@ add_executable (Graficas_2_P2 "src/Graficas_2_P2.cpp" "src/Graficas_2_P2.h"
                               "src/BuffersManagement/VBO.h" "src/BuffersManagement/VBO.cpp"
                               "src/BuffersManagement/VAO.h" "src/BuffersManagement/VAO.cpp"
                               "src/BuffersManagement/EBO.h" "src/BuffersManagement/EBO.cpp"
+                              "src/CameraManagement/Camera.h" "src/CameraManagement/Camera.cpp"
                               ${ASSET_FILES}
 )
 

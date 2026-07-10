@@ -1,72 +1,93 @@
 #version 460 core
-uniform sampler3D uNoiseText; 
-uniform vec2 uRotation;
+
+in vec2 fragUV;
+uniform sampler3D uNoiseText;
+uniform vec3 uViewPos;
+uniform vec3 uViewDir;
+uniform mat4 uViewMatrix;
+uniform mat4 uProjectionMatrix;
 uniform int uSteps;
 uniform float uStepSize;
-in vec2 fragUV;
 out vec4 FragColor;
 
-mat2 rot(float a) {
-	float s = sin(a), c = cos(a);
-	return mat2(c, -s, s, c);
-}
+const vec3 boxMin = vec3(-0.5, -0.5, -0.5);
+const vec3 boxMax = vec3( 0.5,  0.5,  0.5);
 
-float hash(vec2 p) {
-	return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+vec2 intersectAABB(vec3 ro, vec3 rd) {
+		vec3 t0 = (boxMin - ro) / rd;
+		vec3 t1 = (boxMax - ro) / rd;
+		vec3 tmin = min(t0, t1);
+		vec3 tmax = max(t0, t1);
+		float dstA = max(max(tmin.x, tmin.y), tmin.z);
+		float dstB = min(min(tmax.x, tmax.y), tmax.z);
+		return vec2(dstA, dstB);
 }
 
 void main() {
-	vec2 uv = fragUV * 2.0 - 1.0;
-	uv.x *= 800.0 / 600.0;
+		// Ajuste de pantalla
+		vec2 uv = fragUV * 2.0 - 1.0;
+		uv.x *= 800.0 / 600.0;
 
-	//Camara Ortogonal
-	//vec3 rayOrigin = vec3(uv.x, uv.y, -2.0);
-	//vec3 rayDirection = vec3(0.0, 0.0, 1.0);
+		vec3 worldUp = vec3(0.0, 1.0, 0.0);
+		vec3 right = normalize(cross(uViewDir, worldUp));
+		vec3 up = normalize(cross(right, uViewDir));
 
-	//Camara Perspectiva
-	vec3 rayOrigin = vec3(0.0, 0.0, -2.0);
-	vec3 rayDirection = normalize(vec3(uv, 1.0)); 
+		// Disparo del rayo usando los vectores pre-armados
+		vec3 ro = uViewPos;
+		vec3 rd = normalize(uViewDir + uv.x * right + uv.y * up);
 
-	rayOrigin.yz *= rot(uRotation.y);
-	rayDirection.yz *= rot(uRotation.y);
-	rayOrigin.xz *= rot(uRotation.x);
-	rayDirection.xz *= rot(uRotation.x);
-	rayOrigin += vec3(0.5);
-	//Ray Marching
-	vec4 accu = vec4(0.0);
+		// Verificamos si tocamos el AABB
+		vec2 hit = intersectAABB(ro, rd);
+		float tIn = hit.x;
+		float tOut = hit.y;
 
-	float jitter = hash(fragUV) * uStepSize;
-	//vec3 pos = rayOrigin + (rayDirection * jitter);
+		if (tOut < 0.0 || tIn > tOut) {
+			discard; 
+		}
+		tIn = max(tIn, 0.0); 
 
-	vec3 pos = rayOrigin;
-	for(int i = 0; i < uSteps; i++) {
-		pos += rayDirection * uStepSize;  
-		if(pos.x < 0.0 || pos.x > 1.0 || pos.y < 0.0 || pos.y > 1.0 || pos.z < 0.0 || pos.z > 1.0) {
-			continue;
+		// Ray Marching Integrador
+		vec4 accu = vec4(0.0);
+		float t = tIn; 
+
+		for(int i = 0; i < uSteps; i++) {
+			if (t > tOut) break; 
+			
+			vec3 pos = ro + rd * t;
+			vec3 texPos = pos + vec3(0.5); // Convertimos espacio de mundo a espacio UV
+			
+			float n = texture(uNoiseText, texPos).r * 255.0;
+			
+			if (n >= 20.0) {
+				vec3 stepColor = vec3(0.0);
+				float tau = 0.0; 
+				
+				// Tu Función de Transferencia
+				if (n < 75.0) {
+					stepColor = vec3(0.75, 1.0, 1.0); 
+					tau = 2.0; 
+				}
+				else if (n < 150.0) {
+					stepColor = vec3(1.0, 0.25, 0.3); 
+					tau = 5.0; 
+				}
+				else { 
+					stepColor = vec3(0.5); 
+					tau = 20.0; 
+				}
+				
+				// Discretización exponencial física
+				float stepAlpha = 1.0 - exp(-uStepSize * tau);
+				
+				accu.rgb += (1.0 - accu.a) * stepColor * stepAlpha;
+				accu.a += (1.0 - accu.a) * stepAlpha;
+				
+				if(accu.a >= 0.95) break; 
+			}
+			
+			t += uStepSize; 
 		}
-		float n = texture(uNoiseText, pos).r * 255.0;
-		vec3 stepColor;
-		float stepAlpha = 0.05;
-		if (n < 20.0) {
-			continue;
-		}
-		else if (n < 75.0) {
-			stepColor = vec3(0.75, 1.0, 1.0); 
-			stepAlpha = 0.02;
-		}
-		else if (n < 150.0) {
-			stepColor = vec3(1.0, 0.25, 0.3); 
-			stepAlpha = 0.05;
-		}
-		else { 
-			stepColor = vec3(0.5); 
-			stepAlpha = 1.0;
-		}
-		accu.rgb += (1.0 - accu.a) * stepColor * stepAlpha;
-		accu.a += (1.0 - accu.a) * stepAlpha;
-		//Early Termination
-		if(accu.a >= 0.95) break;
+		
+		if (accu.a < 0.01) discard;
+		FragColor = accu;
 	}
-	if (accu.a < 0.01) discard;
-	FragColor = accu;
-}
