@@ -8,7 +8,7 @@ VAO::~VAO() {
 	Delete();
 }
 
-void VAO::LinkAttrib(VBO& VBO, GLuint layout, GLint numComponents, GLenum type,
+GLvoid VAO::LinkAttrib(VBO& VBO, GLuint layout, GLint numComponents, GLenum type,
 	GLsizei stride, GLuint offset) {
 	//Enlaza el VBO en el BindingIndex de el VAO
 	glVertexArrayVertexBuffer(ID, 0, VBO.ID, 0, stride);
@@ -20,19 +20,19 @@ void VAO::LinkAttrib(VBO& VBO, GLuint layout, GLint numComponents, GLenum type,
 	glEnableVertexArrayAttrib(ID, layout);
 }
 
-void VAO::LinkEBO(EBO& EBO) {
+GLvoid VAO::LinkEBO(EBO& EBO) {
 	glVertexArrayElementBuffer(ID, EBO.ID);
 }
 
-void VAO::Bind() {
+GLvoid VAO::Bind() {
 	glBindVertexArray(ID);
 }
 
-void VAO::Unbind() {
+GLvoid VAO::Unbind() {
 	glBindVertexArray(0);
 }
 
-void VAO::Delete() {
+GLvoid VAO::Delete() {
 	if (ID != 0) {
 		glDeleteVertexArrays(1, &ID);
 		ID = 0;

@@ -1,9 +1,9 @@
 #version 460 core
 
-layout (location = 0) in vec2 aPos;
-out vec2 fragUV;
+layout (location = 0) in vec3 aPos;
+out vec2 fragPos;
 
 void main() {
-	gl_Position = vec4(aPos.x, aPos.y, 0.0f, 1.0f);
-	fragUV = (aPos + 1.0f) / 2.0f;
+	gl_Position = vec4(aPos, 1.0f);
+	fragPos = vec2(aPos.x, aPos.y);
 }

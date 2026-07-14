@@ -1,6 +1,6 @@
 #include "Shader.h"
 
-std::string get_file_contents(const char* filename) {
+std::string get_file_contents(const GLchar* filename) {
 	std::ifstream in(filename, std::ios::binary);
 	if (in) {
 		//Leer el contenido del archivo
@@ -20,12 +20,12 @@ std::string get_file_contents(const char* filename) {
 	return "";
 }
 
-ShaderProgram::ShaderProgram(const char* vertexFile, const char* fragmentFile) {
+ShaderProgram::ShaderProgram(const GLchar* vertexFile, const GLchar* fragmentFile) {
 	//Leer el código fuente de los shaders
 	std::string vertexCode = get_file_contents(vertexFile);
 	std::string fragmentCode = get_file_contents(fragmentFile);
-	const char* vertexShaderSource = vertexCode.c_str();
-	const char* fragmentShaderSource = fragmentCode.c_str();
+	const GLchar* vertexShaderSource = vertexCode.c_str();
+	const GLchar* fragmentShaderSource = fragmentCode.c_str();
 	//Crear el Vertex Shader
 	GLuint vertexShader, fragmentShader;
 	vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -54,7 +54,7 @@ ShaderProgram::~ShaderProgram() {
 	Delete();
 }
 
-void ShaderProgram::CheckCompileErrors(GLuint shader, ShaderType type) {
+GLvoid ShaderProgram::CheckCompileErrors(GLuint shader, ShaderType type) {
 	GLint status = GL_FALSE;
 	GLchar message[1024];
 	switch (type) {
@@ -84,15 +84,15 @@ void ShaderProgram::CheckCompileErrors(GLuint shader, ShaderType type) {
 	}
 }
 
-void ShaderProgram::Activate() {
+GLvoid ShaderProgram::Activate() {
 	glUseProgram(ID);
 }
 
-void ShaderProgram::Deactivate() {
+GLvoid ShaderProgram::Deactivate() {
 	glUseProgram(0);
 }
 
-void ShaderProgram::Delete() {
+GLvoid ShaderProgram::Delete() {
 	if (ID != 0) {
 		glDeleteProgram(ID);
 		ID = 0;
@@ -100,43 +100,49 @@ void ShaderProgram::Delete() {
 }
 
 //Uniformes usando DSA
-void ShaderProgram::SetInt(const char* name, const GLint num) {
+GLvoid ShaderProgram::SetInt(const GLchar* name, const GLint num) {
 	//Obtener la ubicación del uniforme en el programa de shaders
 	GLuint loc = glGetUniformLocation(ID, name);
 	//Establecer el valor del uniforme
 	glProgramUniform1i(ID, loc, num);
 }
-void ShaderProgram::SetFloat(const char* name, const GLfloat num) {
+
+GLvoid ShaderProgram::SetFloat(const GLchar* name, const GLfloat num) {
 	//Obtener la ubicación del uniforme en el programa de shaders
 	GLuint loc = glGetUniformLocation(ID, name);
 	//Establecer el valor del uniforme
 	glProgramUniform1f(ID, loc, num);
 }
-void ShaderProgram::SetFloat2(const char* name, const GLfloat num1, const GLfloat num2) {
+
+GLvoid ShaderProgram::SetFloat2(const GLchar* name, const GLfloat num1, const GLfloat num2) {
 	//Obtener la ubicación del uniforme en el programa de shaders
 	GLuint loc = glGetUniformLocation(ID, name);
 	//Establecer el valor del uniforme
 	glProgramUniform2f(ID, loc, num1, num2);
 }
-void ShaderProgram::SetVec2(const char* name, const glm::vec2& vector) {
+
+GLvoid ShaderProgram::SetVec2(const GLchar* name, const glm::vec2& vector) {
 	//Obtener la ubicación del uniforme en el programa de shaders
 	GLuint loc = glGetUniformLocation(ID, name);
 	//Establecer el valor del uniforme
 	glProgramUniform2fv(ID, loc, 1, glm::value_ptr(vector));
 }
-void ShaderProgram::SetVec3(const char* name, const glm::vec3& vector) {
+
+GLvoid ShaderProgram::SetVec3(const GLchar* name, const glm::vec3& vector) {
 	//Obtener la ubicación del uniforme en el programa de shaders
 	GLuint loc = glGetUniformLocation(ID, name);
 	//Establecer el valor del uniforme
 	glProgramUniform3fv(ID, loc, 1, glm::value_ptr(vector));
 }
-void ShaderProgram::SetVec4(const char* name, const glm::vec4& vector) {
+
+GLvoid ShaderProgram::SetVec4(const GLchar* name, const glm::vec4& vector) {
 	//Obtener la ubicación del uniforme en el programa de shaders
 	GLuint loc = glGetUniformLocation(ID, name);
 	//Establecer el valor del uniforme
 	glProgramUniform4fv(ID, loc, 1, glm::value_ptr(vector));
 }
-void ShaderProgram::SetMatrix4(const char* name, const glm::mat4& matrix) {
+
+GLvoid ShaderProgram::SetMatrix4(const GLchar* name, const glm::mat4& matrix) {
 	//Obtener la ubicación del uniforme en el programa de shaders
 	GLuint loc = glGetUniformLocation(ID, name);
 	//Establecer el valor del uniforme

@@ -1,10 +1,10 @@
 #include "Graficas_2_P2.h"
 
-MainEngine::MainEngine(int width, int height) : width(width), height(height) {
+MainEngine::MainEngine(GLuint width, GLuint height) : width(width), height(height) {
 	SetupWindow();
 }
 
-void MainEngine::SetupWindow() {
+GLvoid MainEngine::SetupWindow() {
 	if (!glfwInit()) {
 		std::cerr << "Failed to initialize GLFW\n";
 		exit(EXIT_FAILURE);
@@ -37,49 +37,40 @@ void MainEngine::SetupWindow() {
 	//Habilitar el blending para la transparencia
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	// Inicializar ImGui
+	//Inicializar ImGui
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 460 core");
+	//Inicializar Elementos
+	quad = std::make_unique<Quad>();
+	gizmos = std::make_unique<Gizmos>();
 	//Crear los programas de shaders
 	rayMarchingShader = std::make_unique<ShaderProgram>("assets/shaders/rayMarchingShader.vert", "assets/shaders/rayMarchingShader.frag");
+	gizmosShader = std::make_unique<ShaderProgram>("assets/shaders/gizmosShader.vert", "assets/shaders/gizmosShader.frag");
 	actualShader = rayMarchingShader.get();
 	//Crear la cámara
-	camera = std::make_unique<Camera>(width, height, glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	camera = std::make_unique<Camera>(width, height, 
+		glm::vec3(0.0f, 0.0f, 3.0f), 
+		glm::vec3(0.0f, 0.0f, -1.0f), 
+		glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
-void MainEngine::MainLoop() {
+GLvoid MainEngine::MainLoop() {
 	//Noise Texture
-	std::vector<GLfloat> noiseData(128 * 128 * 128);
-	FastNoiseLite noise;
-	noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-	noise.SetFractalType(FastNoiseLite::FractalType_FBm);
-	noise.SetFractalOctaves(4);
-	noise.SetSeed(time(0));
-	int index = 0;
-	for (int z = 0; z < 128; z++) {
-		for (int y = 0; y < 128; y++) {
-			for (int x = 0; x < 128; x++) {
-				float rawNoise = noise.GetNoise((float)x, (float)y, (float)z);
-				noiseData[index++] = (rawNoise + 1.0f) / 2.0f;
-			}
-		}
-	}
-	glGenTextures(1, &noiseText);
-	glBindTexture(GL_TEXTURE_3D, noiseText);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RED, 128, 128, 128, 0, GL_RED, GL_FLOAT, noiseData.data());
-	// Setup VAO and VBO
-	vao = std::make_unique<VAO>();
-	vbo = std::make_unique<VBO>(vertex);
-	vao->LinkAttrib(*vbo, 0, 2, GL_FLOAT, sizeof(Vertex), 0);
-
+	noiseText = std::make_unique<VolumenTexture>(NOISE3D, 128, 128, 128, "");
+	rawText = std::make_unique<VolumenTexture>(RAW, 128, 256, 256, "assets/models/vis_male_128x256x256_uint8.raw");
+	nrrdText = std::make_unique<VolumenTexture>(NRRD, 0, 0, 0, "assets/models/bonsai_256x256x256_uint8.nrrd");
+	//Transfer Function Texture
+	transferFuncText = std::make_unique<VolumenTexture>(TRANSFER, 256, 0, 0, "");
+	transferFuncText->colorsWithDensity = std::make_shared<std::vector<RGBA_D>>(std::vector<RGBA_D>{
+		{ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, true },
+		{ 0.75f, 1.0f, 1.0f, 0.05f, 0.33f, true },
+		{ 1.0f, 0.25f, 0.3f, 0.25f, 0.66f, true },
+		{ 0.5f, 0.5f, 0.5f, 0.5f, 1.0f, true },
+	});
+	transferFuncText->LoadTransfer();
 	//Main loop
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -90,34 +81,119 @@ void MainEngine::MainLoop() {
 	Cleanup();
 }
 
-void MainEngine::Update() {
-	float currentFrame = glfwGetTime();
+GLvoid MainEngine::Update() {
+	srand(time(0));
+	
+	//Calculo de DeltaTime
+	GLfloat currentFrame = glfwGetTime();
 	deltaTime = currentFrame - lastFrame;
 	lastFrame = currentFrame;
+
+	//Limpiar Frame
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	//Camara
 	camera->Inputs(window, deltaTime);
 	camera->updateMatrix(45.0f, 0.1f, 100.0f);
 	camera->matrix(*actualShader);
+
+	//Draw Quad
 	actualShader->Activate();
-	actualShader->SetInt("uSteps", steps);
+	//stepSize = 0.01f + ((sin(currentFrame * 0.2f) + 1.0f) * 0.5f) * 0.09f;
 	actualShader->SetFloat("uStepSize", stepSize);
-	vao->Bind();
-	glBindTexture(GL_TEXTURE_3D, noiseText);
-	glDrawArrays(GL_TRIANGLES, 0, vertex.size());
+	actualShader->SetFloat("uFov", 45.0f);
+	actualShader->SetVec3("uAABBMin", glm::vec3(-0.5f, -0.5f, -0.5f));
+	actualShader->SetVec3("uAABBMax", glm::vec3(0.5f, 0.5f, 0.5f));
+	actualShader->SetInt("uVolumenText", 0);
+	actualShader->SetInt("uTransferFuncText", 1);
+	actualShader->SetInt("uShadowOn", shadowOn);
+	actualShader->SetFloat("uAspectRatio", (GLfloat) width / height);
+	actualShader->SetFloat("uStartingPoint", startingPoint);
+	//Enviar Texturas
+	//rawText->Bind(0);
+	noiseText->Bind(0);
+	//nrrdText->Bind(0);
+	transferFuncText->Bind(1);
+	quad->Draw();
+
+	//Draw Gizmos
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glm::vec3 aabbMin(-0.5f, -0.5f, -0.5f);
+	glm::vec3 aabbMax(0.5f, 0.5f, 0.5f);
+	gizmos->UpdateAABB(aabbMin, aabbMax);
+	camera->matrix(*gizmosShader);
+	gizmosShader->SetMatrix4("uModelMatrix", glm::mat4(1.0f));
+	gizmos->DrawAABB(*gizmosShader);
+	gizmos->DrawAxes(*gizmosShader);
 }
 
-void MainEngine::DrawUI() {
+GLvoid MainEngine::DrawUI() {
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
-	ImGui::SliderInt("Steps", &steps, 0, 500);
-	ImGui::SliderFloat("StepSize", &stepSize, 0, 0.1, "%.3f");
+	ImGui::SliderFloat("StepSize", &stepSize, 0.0001, 0.01, "%.4f");
+	ImGui::SliderInt("Sombras", &shadowOn, 0, 1);
+	ImGui::SliderFloat("Punto de Inicio", &startingPoint, 0, 1, "%.3f");
+	if (ImGui::CollapsingHeader("Curva de Densidades")) {
+		bool updateTransferFunction = false;
+		auto& colors = *(transferFuncText->colorsWithDensity);
+		if (ImGui::Button("Añadir Punto")) {
+			colors.push_back({ 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, true });
+			updateTransferFunction = true;
+		}
+		ImGui::Separator();
+		int indexToDelete = -1;
+		for (int i = 0; i < colors.size(); i++) {
+			ImGui::PushID(i);
+			if (ImGui::Checkbox("Activo", &colors[i].active)) {
+				updateTransferFunction = true;
+			}
+			ImGui::SameLine();
+			ImGui::Text("Punto %d", i);
+			if (ImGui::SliderFloat("Densidad", &colors[i].density, 0.0f, 1.0f, "%.4f")) updateTransferFunction = true;
+			float col[3] = { colors[i].r, colors[i].g, colors[i].b };
+			if (ImGui::ColorEdit3("Color", col)) {
+				colors[i].r = col[0];
+				colors[i].g = col[1];
+				colors[i].b = col[2];
+				updateTransferFunction = true;
+			}
+			if (ImGui::SliderFloat("Alpha", &colors[i].a, 0.0f, 1.0f, "%.4f")) updateTransferFunction = true;
+			ImGui::SameLine();
+			if (ImGui::Button("X")) {
+				if (colors.size() > 1) {
+					indexToDelete = i;
+				}
+			}
+			ImGui::Separator();
+			ImGui::PopID();
+		}
+		if (indexToDelete != -1) {
+			colors.erase(colors.begin() + indexToDelete);
+			updateTransferFunction = true;
+		}
+		if (updateTransferFunction) {
+			transferFuncText->LoadTransfer();
+		}
+	}
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void MainEngine::Cleanup() {
+GLvoid MainEngine::Cleanup() {
+	quad.reset();
+	rayMarchingShader.reset();
+	rayBandingShader.reset();
+	terrainGenerationShader.reset();
+	pbRayMarchingShader.reset();
+	marchingCubesShader.reset();
+	gizmosShader.reset();
+	gizmos.reset();
+	noiseText.reset();
+	rawText.reset();
+	nrrdText.reset();
+	transferFuncText.reset();
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
@@ -126,7 +202,7 @@ void MainEngine::Cleanup() {
 }
 
 int main() {
-	MainEngine engine(800, 600);
+	MainEngine engine(1200, 800);
 	engine.MainLoop();
 	return 0;
 }

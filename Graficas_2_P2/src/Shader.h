@@ -15,26 +15,27 @@ enum ShaderType {
     FRAGMENT,
     PROGRAM
 };
+
 //Función para leer el contenido de un archivo y devolverlo como una cadena
-std::string get_file_contents(const char* filename);
+std::string get_file_contents(const GLchar* filename);
 //Clase para manejar shaders
 class ShaderProgram {
 public:
     GLuint ID;
-    ShaderProgram(const char* vertexFile, const char* fragmentFile);
+    ShaderProgram(const GLchar* vertexFile, const GLchar* fragmentFile);
     ~ShaderProgram();
-    void CheckCompileErrors(GLuint shader, ShaderType type);
-    void Activate();
-    void Deactivate();
-    void Delete();
+    GLvoid CheckCompileErrors(GLuint shader, ShaderType type);
+    GLvoid Activate();
+    GLvoid Deactivate();
+    GLvoid Delete();
 	//Funciones para establecer uniformes
-    void SetInt(const char* name, const GLint num);
-    void SetFloat(const char* name, const GLfloat num);
-    void SetFloat2(const char* name, const GLfloat num1, const GLfloat num2);
-    void SetVec2(const char* name, const glm::vec2& vector);
-    void SetVec3(const char* name, const glm::vec3& vector);
-    void SetVec4(const char* name, const glm::vec4& vector);
-    void SetMatrix4(const char* name, const glm::mat4& matrix);
+    GLvoid SetInt(const GLchar* name, const GLint num);
+    GLvoid SetFloat(const GLchar* name, const GLfloat num);
+    GLvoid SetFloat2(const GLchar* name, const GLfloat num1, const GLfloat num2);
+    GLvoid SetVec2(const GLchar* name, const glm::vec2& vector);
+    GLvoid SetVec3(const GLchar* name, const glm::vec3& vector);
+    GLvoid SetVec4(const GLchar* name, const glm::vec4& vector);
+    GLvoid SetMatrix4(const GLchar* name, const glm::mat4& matrix);
 };
 
 #endif

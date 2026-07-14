@@ -4,6 +4,8 @@
 
 #include <iostream>
 #include <vector>
+#include <memory>
+#include <ctime>
 #include "FastNoiseLite.h"
 #include "glad/gl.h"
 #include "GLFW/glfw3.h"
@@ -12,43 +14,43 @@
 #include "imgui_impl_opengl3.h"
 //Librerias Internas
 #include "Shader.h"
-#include "BuffersManagement/VAO.h"
-#include "BuffersManagement/VBO.h"
-#include "BuffersManagement/EBO.h"
 #include "CameraManagement/Camera.h"
+#include "ModelManagement/volumenTexture.h"
+#include "ElementManagement/Quad.h"
+#include "ElementManagement/Gizmos.h"
 
 class MainEngine {
-	int width, height;
+	GLuint width, height;
 	GLFWwindow* window;
 	std::unique_ptr<Camera> camera;
+	std::unique_ptr<Quad> quad;
+	std::unique_ptr<Gizmos> gizmos;
 	std::unique_ptr<ShaderProgram> rayMarchingShader;
+	std::unique_ptr<ShaderProgram> rayBandingShader;
+	std::unique_ptr<ShaderProgram> terrainGenerationShader;
+	std::unique_ptr<ShaderProgram> pbRayMarchingShader;
+	std::unique_ptr<ShaderProgram> marchingCubesShader;
+	std::unique_ptr<ShaderProgram> gizmosShader;
 	ShaderProgram* actualShader;
-	float deltaTime = 0.0f;
-	float lastFrame = 0.0f;
+	GLfloat deltaTime = 0.0f;
+	GLfloat lastFrame = 0.0f;
 	//Varios
-	int steps = 200;
-	float stepSize = 0.015;
-	bool isDragging = false;
-	double lastX = 400.0, lastY = 300.0;
-	GLuint noiseText;
-	std::unique_ptr<VAO> vao;
-	std::unique_ptr<VBO> vbo;
-	//Buffers
-	std::vector<Vertex> vertex = {
-		Vertex{glm::vec2{-1.0f, 1.0f}},
-		Vertex{glm::vec2{-1.0f, -1.0f}},
-		Vertex{glm::vec2{1.0f, 1.0f}},
-		Vertex{glm::vec2{-1.0f, -1.0f}},
-		Vertex{glm::vec2{1.0f, 1.0f}},
-		Vertex{glm::vec2{1.0f, -1.0f}}
-	};
+	GLint shadowOn = true;
+	GLfloat stepSize = 0.0039;
+	GLboolean isDragging = false;
+	GLdouble lastX = 400.0, lastY = 300.0;
+	std::unique_ptr<VolumenTexture> noiseText;
+	std::unique_ptr<VolumenTexture> rawText;
+	std::unique_ptr<VolumenTexture> nrrdText;
+	std::unique_ptr<VolumenTexture> transferFuncText;
+	GLfloat startingPoint = 0.0f;
 public:
-	MainEngine(int width, int height);
-	void SetupWindow();
-	void MainLoop();
-	void Update();
-	void DrawUI();
-	void Cleanup();
+	MainEngine(GLuint width, GLuint height);
+	GLvoid SetupWindow();
+	GLvoid MainLoop();
+	GLvoid Update();
+	GLvoid DrawUI();
+	GLvoid Cleanup();
 };
 
 #endif 

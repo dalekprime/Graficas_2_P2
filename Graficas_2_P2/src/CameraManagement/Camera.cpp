@@ -1,7 +1,7 @@
 #include "Camera.h"
 #include <imgui.h>
 
-Camera::Camera(int width, int height, glm::vec3 position, glm::vec3 orientation, glm::vec3 up) {
+Camera::Camera(GLuint width, GLuint height, glm::vec3 position, glm::vec3 orientation, glm::vec3 up) {
 	//tamano de la ventana
 	this->width = width;
 	this->height = height;
@@ -13,22 +13,23 @@ Camera::Camera(int width, int height, glm::vec3 position, glm::vec3 orientation,
 	this->up = up;
 }
 
-void Camera::matrix(ShaderProgram& shader) {
+GLvoid Camera::matrix(ShaderProgram& shader) {
 	shader.SetVec3("uViewPos", position);
 	shader.SetVec3("uViewDir", orientation);
+	shader.SetVec3("uViewUp", up);
 	shader.SetMatrix4("uViewMatrix", view);
-	shader.SetMatrix4("uProjectionMatrix", projection);
+	shader.SetMatrix4("uProjMatrix", projection);
 }
 
-void Camera::updateMatrix(float FOVdeg, float nearPlane, float farPlane) {
+GLvoid Camera::updateMatrix(GLfloat FOVdeg, GLfloat nearPlane, GLfloat farPlane) {
 	//Crear la matriz de vista y proyeccion
 	view = glm::lookAt(position, position + orientation, up);
-	projection = glm::perspective(glm::radians(FOVdeg), (float)width / height, nearPlane, farPlane);
+	projection = glm::perspective(glm::radians(FOVdeg), (GLfloat)width / height, nearPlane, farPlane);
 	cameraMatrix = projection * view;
 }
 
-void Camera::Inputs(GLFWwindow* window, float deltaTime) {
-	float realSpeed = speed * deltaTime;
+GLvoid Camera::Inputs(GLFWwindow* window, GLfloat deltaTime) {
+	GLfloat realSpeed = speed * deltaTime;
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
 		position += realSpeed * orientation;
 	}
@@ -50,19 +51,24 @@ void Camera::Inputs(GLFWwindow* window, float deltaTime) {
 		}
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		if (firstClick) {
-			glfwSetCursorPos(window, (width / 2), (height / 2));
+			glfwSetCursorPos(window, (width / 2.0), (height / 2.0));
 			firstClick = false;
 		}
-		double mouseX, mouseY;
+		GLdouble mouseX, mouseY;
 		glfwGetCursorPos(window, &mouseX, &mouseY);
-		float rotX = sensitivity * (float)(mouseY - (height / 2)) / height;
-		float rotY = sensitivity * (float)(mouseX - (width / 2)) / width;
-		glm::vec3 newOrientation = glm::rotate(orientation, glm::radians(-rotX), glm::normalize(glm::cross(orientation, up)));
-		if (!((glm::angle(newOrientation, up) <= glm::radians(5.0f)) || (glm::angle(newOrientation, -up) <= glm::radians(5.0f)))) {
+		GLfloat rotX = sensitivity * (GLfloat)(mouseY - (height / 2.0)) / height;
+		GLfloat rotY = sensitivity * (GLfloat)(mouseX - (width / 2.0)) / width;
+		glm::vec3 right = glm::normalize(glm::cross(orientation, up));
+		glm::vec3 newOrientation = glm::rotate(orientation, glm::radians(-rotX), right);
+		glm::vec3 newPosition = glm::rotate(position, glm::radians(-rotX), right);
+		if (!((glm::angle(newOrientation, up) <= glm::radians(5.0f)) ||
+			(glm::angle(newOrientation, -up) <= glm::radians(5.0f)))) {
 			orientation = newOrientation;
+			position = newPosition;
 		}
 		orientation = glm::rotate(orientation, glm::radians(-rotY), up);
-		glfwSetCursorPos(window, (width / 2), (height / 2));
+		position = glm::rotate(position, glm::radians(-rotY), up);
+		glfwSetCursorPos(window, (width / 2.0), (height / 2.0));
 	} else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE) {
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		firstClick = true;

@@ -9,15 +9,19 @@ VBO::~VBO() {
 	Delete();
 }
 
-void VBO::Bind() {
+GLvoid VBO::Bind() {
 	glBindBuffer(GL_ARRAY_BUFFER, ID);
 }
 
-void VBO::Unbind() {
+GLvoid VBO::Unbind() {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void VBO::Delete() {
+GLvoid VBO::Update(const std::vector<Vertex>& vertices) {
+	glNamedBufferSubData(ID, 0, vertices.size() * sizeof(Vertex), vertices.data());
+}
+
+GLvoid VBO::Delete() {
 	if (ID != 0) {
 		glDeleteBuffers(1, &ID);
 		ID = 0;

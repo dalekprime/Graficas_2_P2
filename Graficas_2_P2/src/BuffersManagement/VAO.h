@@ -11,12 +11,12 @@ public:
 	GLuint ID = 0;
 	VAO();
 	~VAO();
-	void LinkAttrib(VBO& VBO, GLuint layout, GLint numComponents,
+	GLvoid LinkAttrib(VBO& VBO, GLuint layout, GLint numComponents,
 		GLenum type, GLsizei stride, GLuint offset);
-	void LinkEBO(EBO& EBO);
-	void Bind();
-	void Unbind();
-	void Delete();
+	GLvoid LinkEBO(EBO& EBO);
+	GLvoid Bind();
+	GLvoid Unbind();
+	GLvoid Delete();
 };
 
 #endif

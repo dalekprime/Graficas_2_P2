@@ -1,3 +1,4 @@
+#pragma once
 #ifndef  CAMERA_H
 #define  CAMERA_H
 
@@ -20,19 +21,19 @@ public:
 	glm::mat4 cameraMatrix = glm::mat4(1.0f);
 	glm::mat4 view = glm::mat4(1.0f);
 	glm::mat4 projection = glm::mat4(1.0f);
-	int width;
-	int height;
-	float sensitivity = 100.0f;
-	float speed = 5.0f;
-	bool firstClick = true;
-	float fov = 45.0f;
-	float znear = 0.1f;
-	float zfar = 100.0f;
+	GLuint width;
+	GLuint height;
+	GLfloat sensitivity = 100.0f;
+	GLfloat speed = 5.0f;
+	GLboolean firstClick = true;
+	GLfloat fov = 45.0f;
+	GLfloat znear = 0.1f;
+	GLfloat zfar = 100.0f;
 	std::string name = "";
-	Camera(int width, int height, glm::vec3 position, glm::vec3 orientation, glm::vec3 up);
-	void updateMatrix(float FOVdeg, float nearPlane, float farPlane);
-	void matrix(ShaderProgram& shader);
-	void Inputs(GLFWwindow* window, float deltaTime);
+	Camera(GLuint width, GLuint height, glm::vec3 position, glm::vec3 orientation, glm::vec3 up);
+	GLvoid updateMatrix(GLfloat FOVdeg, GLfloat nearPlane, GLfloat farPlane);
+	GLvoid matrix(ShaderProgram& shader);
+	GLvoid Inputs(GLFWwindow* window, GLfloat deltaTime);
 };
 
 #endif

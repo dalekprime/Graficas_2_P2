@@ -7,7 +7,7 @@
 #include <glm/glm.hpp>
 
 struct Vertex {
-	glm::vec2 position;
+	glm::vec3 position;
 	//glm::vec3 normal;
 	//glm::vec3 color;
 	//glm::vec2 texCoords;
@@ -20,9 +20,10 @@ public:
 	GLuint ID = 0;
 	VBO(const std::vector<Vertex>& vertices);
 	~VBO();
-	void Bind();
-	void Unbind();
-	void Delete();
+	GLvoid Bind();
+	GLvoid Unbind();
+	GLvoid Update(const std::vector<Vertex>& vertices);
+	GLvoid Delete();
 };
 
 #endif

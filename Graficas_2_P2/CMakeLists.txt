@@ -8,6 +8,9 @@ add_executable (Graficas_2_P2 "src/Graficas_2_P2.cpp" "src/Graficas_2_P2.h"
                               "src/BuffersManagement/VAO.h" "src/BuffersManagement/VAO.cpp"
                               "src/BuffersManagement/EBO.h" "src/BuffersManagement/EBO.cpp"
                               "src/CameraManagement/Camera.h" "src/CameraManagement/Camera.cpp"
+                              "src/ModelManagement/volumenTexture.h" "src/ModelManagement/volumenTexture.cpp"
+                              "src/ElementManagement/Quad.h" "src/ElementManagement/Quad.cpp"
+                              "src/ElementManagement/Gizmos.h" "src/ElementManagement/Gizmos.cpp"
                               ${ASSET_FILES}
 )
 
